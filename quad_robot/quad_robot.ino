@@ -1,18 +1,36 @@
+/*
+  Original project by Louis Mariau-Connell (september 2017)
+  https://github.com/louisconnell/Quadruped
+
+  Hardware requirements:
+  - 1x Arduino Nano
+  https://store.arduino.cc/arduino-nano
+  http://hardware-libre.fr/2014/07/arduino-le-nano-officiel/
+  - 1x Adafruit 16-Channel 12-bit PWM/Servo Driver - I2C interface - PCA9685 (PRODUCT ID: 815)
+  https://www.adafruit.com/product/815
+  - 12x SG92R Micro Servo Moteur Nylon Engrenages En fiber de Carbone
+  https://fr.aliexpress.com/item/1PCS-SG92R-Digital-Micro-Servo-Motor-Nylon-Carbon-fiber-Gears-For-RC-Model-Aeromodelling-Helicopter-Parts/32356224677.html
+
+  External dependencies:
+  - "Adafruit PWM Servo Driver Library" by Adafruit
+  https://github.com/adafruit/Adafruit-PWM-Servo-Driver-Library
+*/
+
 #include <math.h>
 #include <Wire.h>
 #include <Adafruit_PWMServoDriver.h>
 
-Adafruit_PWMServoDriver pwm = Adafruit_PWMServoDriver(0x40);
+Adafruit_PWMServoDriver pwm = Adafruit_PWMServoDriver(0x40); /* 0x40 is the 7-bits I2C adresse of the "Adafruit 16-Channel 12-bit PWM/Servo Driver" board */
 
 //servo specs
-#define MIN_PULSE_WIDTH 400 //in micro seconds
-#define MAX_PULSE_WIDTH 2400 //in micro seconds
-#define FREQUENCY 50 //Hz
+#define MIN_PULSE_WIDTH    400 //in micro seconds
+#define MAX_PULSE_WIDTH   2400 //in micro seconds
+#define FREQUENCY           50 //Hz, or a period of 20 ms
 
-//robot dimensions
-#define CoxaLength 20
-#define FemurLength 70
-#define TibiaLength 106
+//robot dimensions (Geometric dimensions of a robot leg)
+#define CoxaLength     20
+#define FemurLength    70
+#define TibiaLength   106
 
 //servo naming
 int Coxas[] = {0, 3, 6, 9};
@@ -60,7 +78,7 @@ int ANALOG_MIN = 4095 / (20000 / MIN_PULSE_WIDTH);
 int ANALOG_MAX = 4095 / (20000 / MAX_PULSE_WIDTH);
 
 void setup() {
-  Serial.begin(115200);
+  Serial.begin(115200); /* Attention to the speed of serial communication, the many information exchange to the PC can slow down the main loop and thus make the robot slower. */
   pwm.begin();
   pwm.setPWMFreq(FREQUENCY);
 
@@ -113,18 +131,18 @@ void loop() {
 
   legIndex = (legIndex + 32) % 128;
 
-  pwm.setPWM(Coxas[0], 0, pulseWidthInverse(DegreeCoxas[0])-10);
-  pwm.setPWM(Femurs[0], 0, pulseWidthInverse(DegreeFemurs[0])-2);
-  pwm.setPWM(Tibias[0], 0, pulseWidthInverse(DegreeTibias[0])-4);
-  pwm.setPWM(Coxas[1], 0, pulseWidthInverse(DegreeCoxas[1])-4);
-  pwm.setPWM(Femurs[1], 0, pulseWidthNormal(DegreeFemurs[1])-4);
-  pwm.setPWM(Tibias[1], 0, pulseWidthNormal(DegreeTibias[1])+3);
-  pwm.setPWM(Coxas[2], 0, pulseWidthInverse(DegreeCoxas[2])-12);
-  pwm.setPWM(Femurs[2], 0, pulseWidthInverse(DegreeFemurs[2])-6);
-  pwm.setPWM(Tibias[2], 0, pulseWidthInverse(DegreeTibias[2])-22);
-  pwm.setPWM(Coxas[3], 0, pulseWidthInverse(DegreeCoxas[3])+4);
-  pwm.setPWM(Femurs[3], 0, pulseWidthNormal(DegreeFemurs[3])+4);
-  pwm.setPWM(Tibias[3], 0, pulseWidthNormal(DegreeTibias[3])+14);
+  pwm.setPWM(Coxas[0], 0, pulseWidthInverse(DegreeCoxas[0]) - 10);
+  pwm.setPWM(Femurs[0], 0, pulseWidthInverse(DegreeFemurs[0]) - 2);
+  pwm.setPWM(Tibias[0], 0, pulseWidthInverse(DegreeTibias[0]) - 4);
+  pwm.setPWM(Coxas[1], 0, pulseWidthInverse(DegreeCoxas[1]) - 4);
+  pwm.setPWM(Femurs[1], 0, pulseWidthNormal(DegreeFemurs[1]) - 4);
+  pwm.setPWM(Tibias[1], 0, pulseWidthNormal(DegreeTibias[1]) + 3);
+  pwm.setPWM(Coxas[2], 0, pulseWidthInverse(DegreeCoxas[2]) - 12);
+  pwm.setPWM(Femurs[2], 0, pulseWidthInverse(DegreeFemurs[2]) - 6);
+  pwm.setPWM(Tibias[2], 0, pulseWidthInverse(DegreeTibias[2]) - 22);
+  pwm.setPWM(Coxas[3], 0, pulseWidthInverse(DegreeCoxas[3]) + 4);
+  pwm.setPWM(Femurs[3], 0, pulseWidthNormal(DegreeFemurs[3]) + 4);
+  pwm.setPWM(Tibias[3], 0, pulseWidthNormal(DegreeTibias[3]) + 14);
   delay(cycleSpeed);
   Serial.println();
 }
@@ -169,7 +187,6 @@ void WalkingCycle() { //define what step in each leg cycle and what position eac
       nextY = map (StepY, 0, abs(StepLength), StepMinPos, StepMaxPos); //new y position
     }
   }
-
   else if (96 <= legIndex) { //LEG LIFTING MOTION
     if (dirX > 0 || 0 > dirX) {
       int StepLength = dirX;
@@ -284,3 +301,5 @@ void InverseKinematics(int numPatte, int x, int y, int z) { //inverse kinematics
   DegreeFemurs[numPatte] = (FemurAngle + (HALF_PI)) * 1000; //Femur in radians x1000
   DegreeTibias[numPatte] = ((HALF_PI) - TibiaAngle) * 1000; //Tibia in radians x1000
 }
+
+
